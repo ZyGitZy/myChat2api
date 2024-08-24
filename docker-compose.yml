@@ -1,0 +1,22 @@
+﻿version: "3.8"
+
+services:
+ chat2api:
+  image: chat2api
+  logging:
+   driver: "json-file"
+   options:
+    max-size: "10m"
+    max-file: "100"
+  deploy:
+   resources:
+    limits:
+     memory: 200M
+   mode: replicated
+   replicas: 1
+   update_config:
+    failure_action: rollback
+    order: start-first
+  
+  ports:
+   - "7798:7798"
