@@ -9,7 +9,7 @@ namespace chatgot.Mapper
         {
             this.CreateMap<GotCompletionResponse, CompletionResponseDto>();
             this.CreateMap<ConversationDto, GotConversationDto>()
-                .ForMember(c => c.Model, b => b.Ignore());
+                .ForMember(c => c.model, b => b.Ignore());
         }
     }
 }

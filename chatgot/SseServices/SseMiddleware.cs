@@ -10,25 +10,18 @@ using System.Net.Http.Headers;
 
 namespace chatgot.SseServices
 {
-    public class SseMiddleware
+    public class SseMiddleware : CommonService
     {
         private readonly RequestDelegate _next;
         private HttpClient _httpClient;
-        private HttpClient _monicaHttpClient;
         private readonly IMapper mapper;
-        private readonly int delay;
         IConfiguration configuration;
-        readonly JsonSerializerSettings settings = new JsonSerializerSettings
-        {
-            ContractResolver = new CamelCasePropertyNamesContractResolver()
-        };
         public SseMiddleware(RequestDelegate next, IMapper mapper,
             IConfiguration configuration
             )
         {
             this.configuration = configuration;
             this._httpClient = new HttpClient();
-            this._monicaHttpClient = new HttpClient();
             _next = next;
             this.mapper = mapper;
         }
@@ -45,8 +38,12 @@ namespace chatgot.SseServices
 
             if (context.Request.Path.Value.EndsWith("/monica/v1/chat/completions"))
             {
-                // 同一个httpclinet不知道会不会有问题
                 await MonicaMapper(context, this._httpClient);
+                return;
+            }
+            else if (context.Request.Path.Value.EndsWith("/merlin/v1/chat/completions"))
+            {
+                await new MerlinService(this.configuration).CommonMapper(context, this._httpClient);
                 return;
             }
             else if (context.Request.Path.Value.EndsWith("/v1/chat/completions"))
@@ -68,7 +65,7 @@ namespace chatgot.SseServices
                 Content = new StringContent(JsonConvert.SerializeObject(task))
             };
             requset.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            requset.Headers.Add("cookie", (await context.GetAuthorization()).Replace("Bearer","").Trim());
+            requset.Headers.Add("cookie", (await context.GetAuthorization()).Replace("Bearer", "").Trim());
             var response = await httpClient.SendAsync(requset, HttpCompletionOption.ResponseHeadersRead);
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
@@ -114,25 +111,7 @@ namespace chatgot.SseServices
         }
 
 
-        private CompletionResponseDto InitCompletionResponse(string model)
-        {
-            return new()
-            {
-                id = Guid.NewGuid().ToString(),
-                created = DateTimeOffset.Now.ToUnixTimeSeconds(),
-                Object = "chat.completion.chunk",
-                model = model,
-                choices = new List<Choice> { new Choice()
-                {
-                     index = 0,
-                     finish_reason = null,
-                     delta = new Delta{
-                     content = ""
-                     }
-                   }
-                }
-            };
-        }
+
 
         private TaskData MapperBody(ConversationDto body)
         {
@@ -193,12 +172,12 @@ namespace chatgot.SseServices
                     conversation_id = "conv:eed171ca-698e-4ceb-99f6-ba9971dfe872",
                     item_Id = itemId,
                     item_type = "reply",
-                    summary = item.Content,
+                    summary = item.content,
                     parent_item_id = perGuid,
                     data = new ItemData
                     {
                         type = "text",
-                        content = item.Content,
+                        content = item.content,
                         quote_content = ""
                     }
                 };
@@ -222,32 +201,32 @@ namespace chatgot.SseServices
             body.model ??= "gpt-4";
             var gotDto = new GotConversationDto
             {
-                Type = body.model,
-                Timezone = "Etc/GMT-8",
-                Messages = body.messages,
+                type = body.model,
+                timezone = "Etc/GMT-8",
+                messages = body.messages,
             };
             var idName = "openai";
             if (body.model.Contains("claude"))
             {
                 idName = "anthropic";
             }
-            gotDto.Model = new Model
+            gotDto.model = new Model
             {
-                Id = $"{idName}/{body.model}",
-                Owner = $"{(body.model.Contains("claude") ? "Anthropic" : "OpenAI")}",
-                Name = $"{idName}/{body.model}",
-                Order = 1,
-                Placeholder = "",
-                Type = "Queries",
-                PicConv = "self-sufficient",
-                DefaultRec = true,
-                Level = "advanced",
-                ContentLength = "200k",
-                Title = body.model,
+                id = $"{idName}/{body.model}",
+                owner = $"{(body.model.Contains("claude") ? "Anthropic" : "OpenAI")}",
+                name = $"{idName}/{body.model}",
+                order = 1,
+                placeholder = "",
+                type = "Queries",
+                picConv = "self-sufficient",
+                defaultRec = true,
+                level = "advanced",
+                contentLength = "200k",
+                title = body.model,
             };
 
             var request = await FillRequsetHeader(context, gotDto);
-            //var toCurl = ToCurl(request);
+            var toCurl = ToCurl(request);
 
             var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             if (body.stream)
@@ -287,99 +266,9 @@ namespace chatgot.SseServices
                });
         }
 
-
-        public string ToCurl(HttpRequestMessage request)
-        {
-            var sb = new StringBuilder();
-
-            sb.Append($"curl -X {request.Method.Method}");
-
-            foreach (var header in request.Headers)
-            {
-                foreach (var value in header.Value)
-                {
-                    sb.Append($" -H \"{header.Key}: {value}\"");
-                }
-            }
-
-            if (request.Content != null)
-            {
-                if (request.Content is StringContent stringContent)
-                {
-                    var contentString = stringContent.ReadAsStringAsync().Result;
-                    sb.Append($" -d '{contentString}'");
-                }
-                else
-                {
-                    var contentType = request.Content.Headers.ContentType?.MediaType;
-                    if (contentType != null)
-                    {
-                        sb.Append($" -H \"Content-Type: {contentType}\"");
-                    }
-                }
-            }
-
-            sb.Append($" {request.RequestUri.AbsoluteUri}");
-
-            return sb.ToString();
-        }
-
-        public async Task SendJson(HttpResponseMessage response, HttpContext context, Func<string, CompletionResponseDto> send)
-        {
-            context.Response.Headers.Add("Content-Type", "application/json");
-            context.Response.StatusCode = StatusCodes.Status200OK;
-            CompletionResponseDto comp = new();
-            await ReaderStream(response, async (response) =>
-            {
-                comp = send(response);
-                return await Task.FromResult(false);
-            });
-
-            await context.Response.WriteAsync(JsonConvert.SerializeObject(comp, settings));
-        }
-
-        public async Task SendStream(HttpResponseMessage response, HttpContext context, Action<string> fun)
-        {
-            context.Response.Headers.Add("Content-Type", "text/event-stream");
-            context.Response.Headers.Add("Cache-Control", "no-cache");
-            context.Response.Headers.Add("Connection", "keep-alive");
-
-            await ReaderStream(response, async (response) =>
-            {
-                if (!context.Response.HttpContext.RequestAborted.IsCancellationRequested)
-                {
-                    fun(response);
-                    return await Task.FromResult(false);
-                }
-                return await Task.FromResult(true);
-            });
-
-        }
-
-        private async Task ReaderStream(HttpResponseMessage response, Func<string, Task<bool>> fun)
-        {
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var reader = new StreamReader(stream);
-
-            while (!reader.EndOfStream)
-            {
-                var line = await reader.ReadLineAsync();
-
-                if (!string.IsNullOrWhiteSpace(line) && line.StartsWith("data"))
-                {
-                    if (await fun(line))
-                    {
-                        return;
-                    }
-                }
-            }
-
-            response.Dispose();
-        }
-
         private async Task<HttpRequestMessage> FillRequsetHeader(HttpContext context, GotConversationDto gotDto)
         {
-            var jStr = JsonConvert.SerializeObject(gotDto, settings);
+            var jStr = JsonConvert.SerializeObject(gotDto);
             var content = new StringContent(jStr, Encoding.UTF8, "application/json");
 
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.chatgot.io/api/chat/conver")
@@ -393,26 +282,10 @@ namespace chatgot.SseServices
             return request;
         }
 
-        private string GetUserAgent()
+        public override Task CommonMapper(HttpContext context, HttpClient httpClient)
         {
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-            {
-                return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-            }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
-            {
-                return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-            }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
-            {
-                return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-            }
-            else
-            {
-                return "Mozilla/5.0 (Unknown OS) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-            }
+            throw new NotImplementedException();
         }
-
     }
 
 }
