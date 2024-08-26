@@ -91,7 +91,7 @@ namespace chatgot.SseServices
                     type = "NEW"
                 },
                 activeThreadSnippet = new List<ActiveThreadSnippet>(),
-                chatId = "9c16aaba-330e-4fb0-8a49-19de891ba528",
+                chatId =Guid.NewGuid().ToString(),
                 language = "CHINESE_SIMPLIFIED",
                 metadata = null,
                 mode = "VANILLA_CHAT",
