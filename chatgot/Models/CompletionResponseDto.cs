@@ -12,6 +12,7 @@ namespace chatgot.Models
         public string? model { get; set; }
         public string? system_fingerprint { get; set; }
         public List<Choice>? choices { get; set; }
+        public object usage { get; set; }
     }
 
     public class Choice
