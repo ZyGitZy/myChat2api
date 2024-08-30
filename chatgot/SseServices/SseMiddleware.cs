@@ -16,16 +16,13 @@ namespace chatgot.SseServices
         private HttpClient _httpClient;
         private readonly IMapper mapper;
         IConfiguration configuration;
-        ILogger<SseMiddleware> logger;
         public SseMiddleware(RequestDelegate next, IMapper mapper,
-            IConfiguration configuration,
-            ILogger<SseMiddleware> logger
+            IConfiguration configuration
             )
         {
             this.configuration = configuration;
             this._httpClient = new HttpClient();
             _next = next;
-            this.logger = logger;
             this.mapper = mapper;
         }
 
@@ -60,10 +57,7 @@ namespace chatgot.SseServices
 
         private async Task MonicaMapper(HttpContext context, HttpClient httpClient)
         {
-            this.logger.LogInformation("开始接收请求：");
             var body = await HttpUnit.GetBody(context);
-            this.logger.LogInformation("接收到请求："+JsonConvert.SerializeObject(body));
-
             var task = MapperBody(body);
             HttpRequestMessage requset = new(HttpMethod.Post, "https://monica.im/api/custom_bot/chat")
             {
