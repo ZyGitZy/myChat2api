@@ -25,6 +25,7 @@ namespace chatgot.SseServices
             this.configuration = configuration;
             this._httpClient = new HttpClient();
             _next = next;
+            this.logger = logger;
             this.mapper = mapper;
         }
 
@@ -59,6 +60,7 @@ namespace chatgot.SseServices
 
         private async Task MonicaMapper(HttpContext context, HttpClient httpClient)
         {
+            this.logger.LogInformation("开始接收请求：");
             var body = await HttpUnit.GetBody(context);
             this.logger.LogInformation("接收到请求："+JsonConvert.SerializeObject(body));
 
