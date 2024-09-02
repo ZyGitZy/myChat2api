@@ -30,8 +30,7 @@ namespace SseServices.MonicaService
                     if (data != null)
                     {
                         comp.choices![0].delta!.content = data.text;
-                        await context.Response.WriteAsync("data:" + JsonConvert.SerializeObject(comp) + "\n\n");
-                        await context.Response.Body.FlushAsync();
+                        await this.FlushAsync(context, comp);
                     }
                 });
             }
