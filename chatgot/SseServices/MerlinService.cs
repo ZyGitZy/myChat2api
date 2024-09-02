@@ -11,67 +11,45 @@ namespace chatgot.SseServices
     public class MerlinService : CommonService
     {
         IConfiguration configuration;
-        public MerlinService(IConfiguration configuration)
+        readonly string url;
+        public MerlinService(IConfiguration configuration, string url)
         {
             this.configuration = configuration;
+            this.url = url;
         }
-        public override async Task CommonMapper(HttpContext context, HttpClient httpClient)
+
+        public override async Task SendAsync(HttpContext context, HttpClient httpClient)
         {
             var body = await HttpUnit.GetBody(context);
-            var task = MapperBody(body);
+            var merlin = MapperBody(body);
 
-            var response = await SendRequest(task, httpClient, context, "https://uam.getmerlin.in/thread/unified?customJWT=true&version=1.1");
+            var response = await SendRequest(merlin, httpClient, context, url);
 
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
             {
-                await SendStream(response, context, async (e) =>
+                await SendStream<MerlinResponse>(response, context, async (data) =>
                 {
-                    if (!string.IsNullOrWhiteSpace(e) && e.Contains("content"))
+                    if (data != null)
                     {
-                        string patternDto = @"^\s*data:\s*";
-                        string jsonData = Regex.Replace(e, patternDto, "", RegexOptions.IgnoreCase);
-                        var res = JsonConvert.DeserializeObject<MerlinResponse>(jsonData);
-                        comp.choices[0].delta.content = res.data.content;
-
-                        if (res.data.eventType == "DONE")
-                        {
-                            comp.choices[0].finish_reason = "stop";
-                            var str = "data:" + JsonConvert.SerializeObject(comp) + "\n\n";
-                            str += "data: [DONE]\n\n";
-                            await context.Response.WriteAsync(str);
-                            await context.Response.Body.FlushAsync();
-                        }
-                        else
-                        {
-                            await context.Response.WriteAsync("data:" + JsonConvert.SerializeObject(comp) + "\n\n");
-                            await context.Response.Body.FlushAsync();
-                        }
-
+                        comp.choices![0].delta!.content = data.data.content;
+                        await this.FlushAsync(context, comp);
                     }
                 });
-                return;
             }
-
-            await SendJson(response, context, (e) =>
+            else
             {
-                if (!string.IsNullOrWhiteSpace(e) && e.Contains("content"))
+                await SendJson<MerlinResponse>(response, context, body.model, (e) =>
                 {
-                    string patternDto = @"^\s*data:\s*";
-                    string jsonData = Regex.Replace(e, patternDto, "", RegexOptions.IgnoreCase);
-                    var res = JsonConvert.DeserializeObject<MerlinResponse>(jsonData);
-                    if (res != null)
-                    {
-                        comp.choices[0].delta.content += res.data.content;
-                    }
-                }
-
-                return comp;
-            });
+                    comp.choices![0].delta!.content = e.data.content;
+                    return comp;
+                });
+            }
         }
 
-        private Merlin MapperBody(ConversationDto body)
+        public override Merlin MapperBody(ConversationDto body)
         {
+            body.model ??= "gpt-4";
             var mapeprModel = configuration.GetSection("Merlin").GetSection(body.model).Value ?? body.model;
             Merlin merlin = new()
             {
@@ -91,7 +69,7 @@ namespace chatgot.SseServices
                     type = "NEW"
                 },
                 activeThreadSnippet = new List<ActiveThreadSnippet>(),
-                chatId =Guid.NewGuid().ToString(),
+                chatId = Guid.NewGuid().ToString(),
                 language = "CHINESE_SIMPLIFIED",
                 metadata = null,
                 mode = "VANILLA_CHAT",
@@ -111,7 +89,7 @@ namespace chatgot.SseServices
                     id = Guid.NewGuid().ToString(),
                     parentId = paredtId,
                     role = "user",
-                    metadata = new Models.MerlinMetadata { },
+                    metadata = new MerlinMetadata { },
                     status = "SUCCESS",
                     activeChildIdx = 0,
                     totalChildren = 1,
@@ -126,7 +104,7 @@ namespace chatgot.SseServices
                     id = Guid.NewGuid().ToString(),
                     parentId = active.id,
                     role = "assistant",
-                    metadata = new Models.MerlinMetadata { },
+                    metadata = new MerlinMetadata { },
                     status = "SUCCESS",
                     activeChildIdx = 0,
                     totalChildren = 1,
@@ -141,5 +119,6 @@ namespace chatgot.SseServices
 
             return merlin;
         }
+
     }
 }

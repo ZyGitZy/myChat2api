@@ -2,7 +2,7 @@
 
 namespace chatgot.Models
 {
-    public class GotConversationDto
+    public class GotConversationDto: TargetDto
     {
         public Model model { get; set; }
         public List<GotMessage> messages { get; set; }

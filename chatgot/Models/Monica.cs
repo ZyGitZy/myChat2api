@@ -1,11 +1,6 @@
-﻿using System.Net.Http.Headers;
-using chatgot.Models;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-
-namespace SseServices
+﻿namespace chatgot.Models
 {
-    public class TaskData
+    public class TaskData : TargetDto
     {
         public string task_uid { get; set; }
         public string bot_uid { get; set; }
@@ -61,11 +56,6 @@ namespace SseServices
 
     public class Monica
     {
-        public string text
-        {
-            get; set;
-        }
-
-        public bool? finished { get; set; }
+        public string text { get; set; }
     }
 }

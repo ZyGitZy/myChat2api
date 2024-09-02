@@ -10,14 +10,4 @@
         public double? frequencypenalty { get; set; }
         public double? topp { get; set; }
     }
-
-    public class SystemContent
-    {
-        public string description { get; set; } = string.Empty;
-        public string currentModel { get; set; } = string.Empty;
-        public DateTime? currentTime { get; set; }
-        public string timezone { get; set; } = string.Empty;
-        public string latexInline { get; set; } = string.Empty;
-        public string latexBlock { get; set; } = string.Empty;
-    }
 }
