@@ -1,10 +1,7 @@
 ﻿using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
 using chatgot.Models;
-using chatgot.SseServices;
+using chatgot.Models.MonicaModels;
 using chatgot.Units;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace SseServices.MonicaService
 {
@@ -21,11 +18,11 @@ namespace SseServices.MonicaService
         {
             var body = await context.GetBody();
             var mapperData = MapperBody(body);
-            var response = await this.SendRequest(mapperData, httpClient, context, url, body.stream);
+            using var response = await this.SendRequest(mapperData, httpClient, context, url, body.stream);
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
             {
-                await this.SendStream<Monica>(response, context, async (data) =>
+                await this.SendStream<MonicaResponse>(response, context, async (data) =>
                 {
                     if (data != null)
                     {
@@ -36,7 +33,7 @@ namespace SseServices.MonicaService
             }
             else
             {
-                await SendJson<List<Monica>>(response, context, body.model, (data) =>
+                await SendJson<List<MonicaResponse>>(response, context, body.model, (data) =>
                 {
                     comp.choices![0].delta!.content = string.Join("", data.Select(s => s.text));
                     return comp;
@@ -52,11 +49,11 @@ namespace SseServices.MonicaService
             request.Headers.Add("cookie", resToken);
         }
 
-        public override TaskData MapperBody(ConversationDto body)
+        public MonicaRequest MapperBody(CompletionsDto body)
         {
             body.model ??= "gpt-4";
             var config = this.configuration.GetSection($"Monica:{body.model}");
-            var task = new TaskData
+            var task = new MonicaRequest
             {
                 task_uid = "task:a2774e95-c39c-4c0a-8d27-448dc3bddee1",
                 bot_uid = config.GetSection("bot").Value ?? "gpt_4_o_mini_chat",

@@ -2,7 +2,7 @@
 
 namespace chatgot.Models
 {
-    public class CompletionResponseDto
+    public class CompletionsResponse
     {
         public string? id { get; set; }
 

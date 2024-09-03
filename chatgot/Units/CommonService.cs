@@ -1,5 +1,4 @@
 ﻿using chatgot.Models;
-using chatgot.Units;
 using Newtonsoft.Json;
 using System;
 using System.Net.Http;
@@ -8,13 +7,11 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace chatgot.SseServices
+namespace chatgot.Units
 {
     public abstract class CommonService
     {
         public abstract Task SendAsync(HttpContext context, HttpClient httpClient);
-
-        public abstract TargetDto MapperBody(ConversationDto body);
 
         public virtual async Task<HttpResponseMessage> SendRequest(object body, HttpClient httpClient, HttpContext context, string url, bool isStream = true)
         {
@@ -37,7 +34,7 @@ namespace chatgot.SseServices
             return message;
         }
 
-        public async Task FlushAsync(HttpContext context, CompletionResponseDto data)
+        public async Task FlushAsync(HttpContext context, CompletionsResponse data)
         {
             await context.Response.WriteAsync("data:" + JsonConvert.SerializeObject(data) + "\n\n");
             await context.Response.Body.FlushAsync();
@@ -45,7 +42,7 @@ namespace chatgot.SseServices
 
         public virtual T DeserializeObject<T>(string data)
         {
-            string patternDto = @"^\s*data:\s*";
+            string patternDto = @"^.*?:";
             string jsonData = Regex.Replace(data, patternDto, "", RegexOptions.IgnoreCase);
             var res = JsonConvert.DeserializeObject<T>(jsonData);
             return res;
@@ -76,7 +73,7 @@ namespace chatgot.SseServices
             }
         }
 
-        public virtual async Task SendJson<T>(HttpResponseMessage response, HttpContext context, string model, Func<T, CompletionResponseDto> fun)
+        public virtual async Task SendJson<T>(HttpResponseMessage response, HttpContext context, string model, Func<T, CompletionsResponse> fun)
         {
             context.Response.Headers.Add("Content-Type", "application/json");
             context.Response.StatusCode = StatusCodes.Status200OK;
@@ -89,7 +86,7 @@ namespace chatgot.SseServices
             try
             {
                 var responseStr = await response.Content.ReadAsStringAsync();
-                var regex = new Regex(@"^\s*data:\s*", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var regex = new Regex(@"^.*?:", RegexOptions.Compiled | RegexOptions.IgnoreCase);
                 var jsonDataArray = responseStr.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
                                               .Select(data => regex.Replace(data, string.Empty))
                                               .ToList();
@@ -109,7 +106,7 @@ namespace chatgot.SseServices
         }
 
 
-        public CompletionResponseDto InitCompletionResponse(string model)
+        public CompletionsResponse InitCompletionResponse(string model)
         {
             return new()
             {

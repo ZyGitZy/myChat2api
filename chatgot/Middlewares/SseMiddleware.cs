@@ -1,15 +1,9 @@
-﻿using chatgot.Models;
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json;
-using System.Text.RegularExpressions;
-using System.Text;
-using AutoMapper;
+﻿using AutoMapper;
 using chatgot.Units;
-using SseServices;
-using System.Net.Http.Headers;
 using SseServices.MonicaService;
+using chatgot.SseServices;
 
-namespace chatgot.SseServices
+namespace chatgot.Middlewares
 {
     public class SseMiddleware
     {
@@ -22,7 +16,7 @@ namespace chatgot.SseServices
             )
         {
             this.configuration = configuration;
-            this._httpClient = new HttpClient();
+            _httpClient = new HttpClient();
             _next = next;
             this.mapper = mapper;
         }
@@ -39,17 +33,22 @@ namespace chatgot.SseServices
 
             if (context.Request.Path.Value.EndsWith("/monica/v1/chat/completions"))
             {
-                await new MonicaService(this.configuration, "https://monica.im/api/custom_bot/chat").SendAsync(context, this._httpClient);
+                await new MonicaService(configuration, "https://monica.im/api/custom_bot/chat").SendAsync(context, _httpClient);
                 return;
             }
             else if (context.Request.Path.Value.EndsWith("/merlin/v1/chat/completions"))
             {
-                await new MerlinService(this.configuration, "https://uam.getmerlin.in/thread/unified?customJWT=true&version=1.1").SendAsync(context, this._httpClient);
+                await new MerlinService(configuration, "https://uam.getmerlin.in/thread/unified?customJWT=true&version=1.1").SendAsync(context, _httpClient);
                 return;
             }
-            else if (context.Request.Path.Value.EndsWith("/v1/chat/completions"))
+            else if (context.Request.Path.Value.EndsWith("/notdiamond/v1/chat/completions"))
             {
-                await new GotService("https://api.chatgot.io/api/chat/conver").SendAsync(context, this._httpClient);
+                await new NotdiamondService(configuration, "https://chat.notdiamond.ai/").SendAsync(context, _httpClient);
+                return;
+            }
+            else if(context.Request.Path.Value.EndsWith("/v1/chat/completions"))
+            {
+                await new ChatgotService("https://api.chatgot.io/api/chat/conver").SendAsync(context, _httpClient);
                 return;
             }
 

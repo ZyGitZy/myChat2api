@@ -1,6 +1,8 @@
-﻿namespace chatgot.Models
+﻿using chatgot.Models;
+
+namespace chatgot.Models.ChatgotModels
 {
-    public class GotCompletionResponse
+    public class ChatgotResponse
     {
         public string? Id { get; set; }
         public string? Object { get; set; }

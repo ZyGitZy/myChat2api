@@ -1,20 +1,21 @@
 ﻿using chatgot.Models;
+using chatgot.Models.ChatgotModels;
 using chatgot.Units;
 using Newtonsoft.Json;
 
 namespace chatgot.SseServices
 {
-    public class GotService : CommonService
+    public class ChatgotService : CommonService
     {
         readonly string url;
-        public GotService(string url)
+        public ChatgotService(string url)
         {
             this.url = url;
         }
-        public override GotConversationDto MapperBody(ConversationDto body)
+        public ChatgotRequest MapperBody(CompletionsDto body)
         {
             body.model ??= "gpt-4";
-            var gotDto = new GotConversationDto
+            var gotDto = new ChatgotRequest
             {
                 type = body.model,
                 timezone = "Etc/GMT-8",
@@ -48,11 +49,11 @@ namespace chatgot.SseServices
             var body = await context.GetBody();
 
             var mapperData = MapperBody(body);
-            var response = await this.SendRequest(mapperData, httpClient, context, url, body.stream);
+            using var response = await SendRequest(mapperData, httpClient, context, url, body.stream);
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
             {
-                await this.SendStream<GotCompletionResponse>(response, context, async (data) =>
+                await SendStream<ChatgotResponse>(response, context, async (data) =>
                 {
                     if (data != null)
                     {
@@ -64,7 +65,7 @@ namespace chatgot.SseServices
             }
             else
             {
-                await SendJson<List<GotCompletionResponse>>(response, context, body.model, (data) =>
+                await SendJson<List<ChatgotResponse>>(response, context, body.model, (data) =>
                 {
                     comp.choices![0].delta!.content = string.Join(string.Empty, data.Select(s => s.Choices[0].delta.content));
                     return comp;

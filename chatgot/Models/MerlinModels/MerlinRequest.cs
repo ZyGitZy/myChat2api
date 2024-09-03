@@ -1,9 +1,6 @@
-﻿namespace chatgot.Models
+﻿namespace chatgot.Models.MerlinModels
 {
-    using Newtonsoft.Json;
-    using System.Collections.Generic;
-
-    public class Merlin: TargetDto
+    public class MerlinRequest
     {
         public Action action { get; set; }
         public List<ActiveThreadSnippet> activeThreadSnippet { get; set; }
@@ -52,20 +49,6 @@
 
     public class PersonaConfig
     {
-    }
-
-    public class MerlinResponse 
-    {
-        public string status { get; set; }
-
-        public DataModel data { get; set; }
-    }
-
-    public class DataModel
-    {
-        public string content { get; set; }
-
-        public string eventType { get; set; }
     }
 
 }

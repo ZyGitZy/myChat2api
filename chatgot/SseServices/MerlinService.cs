@@ -1,4 +1,6 @@
 ﻿using chatgot.Models;
+using chatgot.Models.MerlinModels;
+using chatgot.Models.MonicaModels;
 using chatgot.Units;
 using Newtonsoft.Json;
 using SseServices;
@@ -23,7 +25,7 @@ namespace chatgot.SseServices
             var body = await HttpUnit.GetBody(context);
             var merlin = MapperBody(body);
 
-            var response = await SendRequest(merlin, httpClient, context, url);
+            using var response = await SendRequest(merlin, httpClient, context, url);
 
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
@@ -72,13 +74,13 @@ namespace chatgot.SseServices
             }
         }
 
-        public override Merlin MapperBody(ConversationDto body)
+        public MerlinRequest MapperBody(CompletionsDto body)
         {
             body.model ??= "gpt-4";
             var mapeprModel = configuration.GetSection("Merlin").GetSection(body.model).Value ?? body.model;
-            Merlin merlin = new()
+            MerlinRequest merlin = new()
             {
-                action = new Models.Action
+                action = new Models.MerlinModels.Action
                 {
                     message = new MerlinMessage
                     {

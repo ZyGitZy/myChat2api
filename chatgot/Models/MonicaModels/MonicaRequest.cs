@@ -1,6 +1,6 @@
-﻿namespace chatgot.Models
+﻿namespace chatgot.Models.MonicaModels
 {
-    public class TaskData : TargetDto
+    public class MonicaRequest
     {
         public string task_uid { get; set; }
         public string bot_uid { get; set; }
@@ -54,8 +54,4 @@
         public bool enable { get; set; }
     }
 
-    public class Monica
-    {
-        public string text { get; set; }
-    }
 }

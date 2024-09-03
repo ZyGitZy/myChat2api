@@ -1,21 +1,18 @@
 ﻿using System.Reflection;
+using chatgot.Models;
 
-namespace chatgot.Models
+namespace chatgot.Models.ChatgotModels
 {
-    public class GotConversationDto: TargetDto
+    public class ChatgotRequest
     {
         public Model model { get; set; }
-        public List<GotMessage> messages { get; set; }
+        public List<Message> messages { get; set; }
         public string networkModelId { get; set; }
         public string type { get; set; }
         public string timezone { get; set; }
     }
 
-    public class GotMessage
-    {
-        public string role { get; set; }
-        public string content { get; set; }
-    }
+
 
     public class Model
     {
