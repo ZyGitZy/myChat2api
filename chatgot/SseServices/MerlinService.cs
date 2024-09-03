@@ -39,11 +39,36 @@ namespace chatgot.SseServices
             }
             else
             {
-                await SendJson<MerlinResponse>(response, context, body.model, (e) =>
+                await SendJson<List<MerlinResponse>>(response, context, body.model, (data) =>
                 {
-                    comp.choices![0].delta!.content = e.data.content;
+                    comp.choices![0].delta!.content = string.Join("", data.Select(s => s.data.content));
                     return comp;
                 });
+            }
+        }
+
+
+        public override async Task<T> MapperJsonToObj<T>(string model, HttpResponseMessage response)
+        {
+            try
+            {
+                var responseStr = await response.Content.ReadAsStringAsync();
+                var regex = new Regex(@"^\s*data:\s*", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var jsonDataArray = responseStr.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(data => regex.Replace(data, string.Empty))
+                                              .ToList();
+                var filterData = jsonDataArray.Select(s => s.Replace("event: message\ndata:", string.Empty));
+                var jsonArray = "[" + string.Join(",", filterData) + "]";
+                var result = JsonConvert.DeserializeObject<T>(jsonArray);
+                return result;
+            }
+            catch (JsonException jsonEx)
+            {
+                throw new InvalidOperationException("JSON解析失败", jsonEx);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("数据处理失败", ex);
             }
         }
 

@@ -64,9 +64,9 @@ namespace chatgot.SseServices
             }
             else
             {
-                await SendJson<GotCompletionResponse>(response, context, body.model, (data) =>
+                await SendJson<List<GotCompletionResponse>>(response, context, body.model, (data) =>
                 {
-                    comp.choices![0].delta!.content = data.Choices[0].delta.content;
+                    comp.choices![0].delta!.content = string.Join(string.Empty, data.Select(s => s.Choices[0].delta.content));
                     return comp;
                 });
             }

@@ -36,9 +36,9 @@ namespace SseServices.MonicaService
             }
             else
             {
-                await SendJson<Monica>(response, context, body.model, (data) =>
+                await SendJson<List<Monica>>(response, context, body.model, (data) =>
                 {
-                    comp.choices![0].delta!.content = data.text;
+                    comp.choices![0].delta!.content = string.Join("", data.Select(s => s.text));
                     return comp;
                 });
             }

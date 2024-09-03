@@ -86,10 +86,28 @@ namespace chatgot.SseServices
 
         public virtual async Task<T> MapperJsonToObj<T>(string model, HttpResponseMessage response)
         {
-            var responseStr = await response.Content.ReadAsStringAsync();
-            var result = DeserializeObject<T>(responseStr);
-            return result;
+            try
+            {
+                var responseStr = await response.Content.ReadAsStringAsync();
+                var regex = new Regex(@"^\s*data:\s*", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var jsonDataArray = responseStr.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(data => regex.Replace(data, string.Empty))
+                                              .ToList();
+                var filterData = jsonDataArray.Where(w => w.Trim().StartsWith("{") && w.Trim().EndsWith("}"));
+                var jsonArray = "[" + string.Join(",", filterData) + "]";
+                var result = JsonConvert.DeserializeObject<T>(jsonArray);
+                return result;
+            }
+            catch (JsonException jsonEx)
+            {
+                throw new InvalidOperationException("JSON解析失败", jsonEx);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("数据处理失败", ex);
+            }
         }
+
 
         public CompletionResponseDto InitCompletionResponse(string model)
         {
