@@ -22,7 +22,7 @@ namespace chatgot.SseServices
         public List<CompletionsDto> MapperBody(CompletionsDto body)
         {
             body.model = configuration.GetSection("Notdiamond").GetSection(body.model).Value ?? body.model;
-            body.model ??= "gpt-4";
+            body.model ??= "gpt-4o";
             return new List<CompletionsDto> { body };
         }
 

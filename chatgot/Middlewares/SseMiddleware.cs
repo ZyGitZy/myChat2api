@@ -9,16 +9,14 @@ namespace chatgot.Middlewares
     {
         private readonly RequestDelegate _next;
         private HttpClient _httpClient;
-        private readonly IMapper mapper;
         IConfiguration configuration;
-        public SseMiddleware(RequestDelegate next, IMapper mapper,
+        public SseMiddleware(RequestDelegate next,
             IConfiguration configuration
             )
         {
             this.configuration = configuration;
             _httpClient = new HttpClient();
             _next = next;
-            this.mapper = mapper;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -46,7 +44,7 @@ namespace chatgot.Middlewares
                 await new NotdiamondService(configuration, "https://chat.notdiamond.ai/").SendAsync(context, _httpClient);
                 return;
             }
-            else if(context.Request.Path.Value.EndsWith("/v1/chat/completions"))
+            else if (context.Request.Path.Value.EndsWith("/v1/chat/completions"))
             {
                 await new ChatgotService("https://api.chatgot.io/api/chat/conver").SendAsync(context, _httpClient);
                 return;
