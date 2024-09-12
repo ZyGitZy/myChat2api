@@ -5,10 +5,31 @@ namespace chatgot.Models.ChatgotModels
 {
     public class ChatgotRequest
     {
-        public Model model { get; set; }
-        public List<Message> messages { get; set; }
-        public string networkModelId { get; set; }
-        public string type { get; set; }
+        public string clId { get; set; }
+
+        private string _model;
+        public string model
+        {
+            get
+            {
+                if (_model.Contains("gpt")) 
+                {
+                    return $"openai/{_model}";
+                }
+
+                if (_model.Contains("claude")) 
+                {
+                    return $"anthropic/{_model}";
+                }
+
+                return _model;
+            }
+            set {
+                _model = value;
+            }
+        }
+        public string prompt { get; set; }
+        public string webAccess { get; set; }
         public string timezone { get; set; }
     }
 

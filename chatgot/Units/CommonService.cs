@@ -17,6 +17,8 @@ namespace chatgot.Units
         {
             HttpRequestMessage requset = await SetHttpRequestMessage(body, url, context);
 
+            var curl = this.ToCurl(requset);
+
             var response = await httpClient.SendAsync(requset, isStream ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead);
 
             return response;
@@ -66,7 +68,7 @@ namespace chatgot.Units
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (!string.IsNullOrWhiteSpace(line) && line.StartsWith("data"))
+                if (!string.IsNullOrWhiteSpace(line) && line.Contains("content"))
                 {
                     fun(DeserializeObject<T>(line));
                 }
