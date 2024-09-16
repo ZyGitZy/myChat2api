@@ -19,17 +19,38 @@ namespace chatgot.SseServices
             this.url = url;
         }
 
-        public List<CompletionsDto> MapperBody(CompletionsDto body)
+        public List<NotdiamondRequest> MapperBody(CompletionsDto body)
         {
-            body.model = configuration.GetSection("Notdiamond").GetSection(body.model).Value ?? body.model;
-            body.model ??= "gpt-4o";
-            return new List<CompletionsDto> { body };
+            string model;
+            if (body.model.Contains("gpt"))
+            {
+                model = "openai";
+            }
+            else if (body.model.Contains(""))
+            {
+                model = "anthropic";
+            }
+            else
+            {
+                model = "google";
+            }
+            return new List<NotdiamondRequest>
+            {
+                new  NotdiamondRequest{
+                     messages = body.messages,
+                     provider = new Povider{
+                         model = body.model,
+                         provider = model
+                     }
+                },
+            };
         }
 
         public override async Task SendAsync(HttpContext context, HttpClient httpClient)
         {
             var body = await context.GetBody();
             var mapper = MapperBody(body);
+            string res = JsonConvert.SerializeObject(mapper);
             using var response = await SendRequest(mapper, httpClient, context, url);
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
@@ -86,12 +107,12 @@ namespace chatgot.SseServices
 
         public override T DeserializeObject<T>(string data)
         {
-            string patternDto = @"^.*?:";
-            string jsonData = Regex.Replace(data, patternDto, "", RegexOptions.IgnoreCase);
-            if (!jsonData.StartsWith("{"))
+            if (!data.Contains("diff") && (!data.Contains("curr") || data.Contains("output")))
             {
                 return default;
             }
+            string patternDto = @"^.*?:";
+            string jsonData = Regex.Replace(data, patternDto, "", RegexOptions.IgnoreCase);
             var res = JsonConvert.DeserializeObject<T>(jsonData);
             return res;
         }
@@ -125,8 +146,28 @@ namespace chatgot.SseServices
             var nextAction = this.configuration.GetSection("Notdiamond:next-action").Value ?? throw new Exception("next-action is null");
             request.Headers.Add("next-action", nextAction);
             var resToken = await context.GetAuthorization();
-            request.Headers.Add("cookie", resToken);
-            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            if (string.IsNullOrWhiteSpace(resToken)) throw new Exception("cookie is null");
+            request.Headers.Add("cookie", ReplaceTimestamp(resToken));
+            request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("text/plain; charset=UTF-8");
+        }
+
+        public string ReplaceTimestamp(string input)
+        {
+            // 获取当前时间戳
+            long currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            // 替换找到的时间戳
+            string result = Regex.Replace(input, @"%5B(\d+)%2C", match =>
+            {
+                return $"%5B{currentTimestamp + 6 * 60 * 1000}%2C";
+            });
+
+            result = Regex.Replace(result, @"%2C(\d+)%5D", match =>
+            {
+                return $"%2C{currentTimestamp}%5D";
+            });
+
+            return result;
         }
     }
 }
