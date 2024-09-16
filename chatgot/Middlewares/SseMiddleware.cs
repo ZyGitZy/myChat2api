@@ -46,7 +46,7 @@ namespace chatgot.Middlewares
             }
             else if (context.Request.Path.Value.EndsWith("/v1/chat/completions"))
             {
-                await new ChatgotService("https://api.chatgot.io/api/chat/conver").SendAsync(context, _httpClient);
+                await new ChatgotService("https://api.chatgot.io/api/v2/chat/conversation").SendAsync(context, _httpClient);
                 return;
             }
 

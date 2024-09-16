@@ -2,6 +2,9 @@
 using chatgot.Models.ChatgotModels;
 using chatgot.Units;
 using Newtonsoft.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace chatgot.SseServices
 {
@@ -17,30 +20,12 @@ namespace chatgot.SseServices
             body.model ??= "gpt-4";
             var gotDto = new ChatgotRequest
             {
-                type = body.model,
-                timezone = "Etc/GMT-8",
-                messages = body.messages,
+                clId = "66e2b296e451cb2ab96b4f67",
+                model = body.model,
+                prompt = body.messages.LastOrDefault()?.content ?? "",
+                webAccess = "close",
+                timezone = "Asia/Shanghai"
             };
-            var idName = "openai";
-            if (body.model.Contains("claude"))
-            {
-                idName = "anthropic";
-            }
-            gotDto.model = new Model
-            {
-                id = $"{idName}/{body.model}",
-                owner = $"{(body.model.Contains("claude") ? "Anthropic" : "OpenAI")}",
-                name = $"{idName}/{body.model}",
-                order = 1,
-                placeholder = "",
-                type = "Queries",
-                picConv = "self-sufficient",
-                defaultRec = true,
-                level = "advanced",
-                contentLength = "200k",
-                title = body.model,
-            };
-
             return gotDto;
         }
 
@@ -57,7 +42,7 @@ namespace chatgot.SseServices
                 {
                     if (data != null)
                     {
-                        comp.choices![0].delta!.content = data.Choices[0].delta.content;
+                        comp.choices![0].delta!.content = data.data.content;
                         await context.Response.WriteAsync("data:" + JsonConvert.SerializeObject(comp) + "\n\n");
                         await context.Response.Body.FlushAsync();
                     }
@@ -67,10 +52,34 @@ namespace chatgot.SseServices
             {
                 await SendJson<List<ChatgotResponse>>(response, context, body.model, (data) =>
                 {
-                    comp.choices![0].delta!.content = string.Join(string.Empty, data.Select(s => s.Choices[0].delta.content));
+                    comp.choices![0].delta!.content = string.Join(string.Empty, data.Select(s => s.data.content));
                     return comp;
                 });
             }
+        }
+
+        public override async Task<T> MapperJsonToObj<T>(string model, HttpResponseMessage response)
+        {
+            var responseStr = await response.Content.ReadAsStringAsync();
+
+            string[] lines = responseStr.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            StringBuilder stringBuilder = new();
+            stringBuilder.Append('[');
+            foreach (var line in lines)
+            {
+                int dataIndex = line.IndexOf("data: ");
+                if (dataIndex != -1)
+                {
+                    string jsonData = line.Substring(dataIndex + "data: ".Length);
+
+                    stringBuilder.Append(jsonData + ",");
+                }
+            }
+
+            var jsonArray = stringBuilder.ToString().TrimEnd(',') + "]";
+
+            return JsonConvert.DeserializeObject<T>(jsonArray);
         }
 
         public override Task SetRequestHeader(HttpRequestMessage request, HttpContext context)
