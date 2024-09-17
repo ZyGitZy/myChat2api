@@ -4,6 +4,7 @@ using chatgot.Models.YouModels;
 using chatgot.Units;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace chatgot.SseService
 {
@@ -40,11 +41,25 @@ namespace chatgot.SseService
             }
         }
 
-
-
-        public override Task<T> MapperJsonToObj<T>(string model, HttpResponseMessage response)
+        public override T DeserializeObject<T>(string data)
         {
-            return base.MapperJsonToObj<T>(model, response);
+
+            return base.DeserializeObject<T>(data);
+        }
+
+
+        public override async Task<T> MapperJsonToObj<T>(string model, HttpResponseMessage response)
+        {
+            var responseStr = await response.Content.ReadAsStringAsync();
+            var regex = new Regex(@"^.*?:", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var jsonDataArray = responseStr.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                          .Select(data => regex.Replace(data, string.Empty))
+                                          .ToList();
+            var filterData = jsonDataArray.Where(w => w.Contains("youChatToken\ndata:")).Select(s =>
+            s.Replace("youChatToken\ndata:", "").Replace("**", " ").Replace("####", ""));
+            var jsonArray = "[" + string.Join(",", filterData) + "]";
+            var result = JsonConvert.DeserializeObject<T>(jsonArray);
+            return result;
         }
 
         public override async Task<HttpResponseMessage> SendRequest(object body, HttpClient httpClient, HttpContext context, string url, bool isStream = true)

@@ -68,7 +68,7 @@ namespace chatgot.Units
             {
                 await Task.Delay(35);
                 var line = await reader.ReadLineAsync();
-                if (!string.IsNullOrWhiteSpace(line) && (line.Contains(lineKey)))
+                if (!string.IsNullOrWhiteSpace(line) && line.Contains("{") && line.Contains("}") && (line.Contains(lineKey)))
                 {
                     await fun(DeserializeObject<T>(line));
                 }
