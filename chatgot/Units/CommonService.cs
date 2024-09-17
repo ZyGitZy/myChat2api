@@ -6,18 +6,16 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 
 namespace chatgot.Units
 {
     public abstract class CommonService
     {
         public abstract Task SendAsync(HttpContext context, HttpClient httpClient);
-
         public virtual async Task<HttpResponseMessage> SendRequest(object body, HttpClient httpClient, HttpContext context, string url, bool isStream = true)
         {
             HttpRequestMessage requset = await SetHttpRequestMessage(body, url, context);
-
-            //var curl = this.ToCurl(requset);
 
             var response = await httpClient.SendAsync(requset, isStream ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead);
 
@@ -56,23 +54,34 @@ namespace chatgot.Units
             {
                 request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             }
+            request.Headers.Add("Accept", "text/event-stream");
             var resToken = await context.GetAuthorization();
             request.Headers.Add("Authorization", resToken);
         }
 
-        public virtual async Task SendStream<T>(HttpResponseMessage response, HttpContext context, Action<T> fun)
+        public virtual async Task SendStream<T>(HttpResponseMessage response, HttpContext context, Func<T, Task> fun, string lineKey = "data")
         {
             SetResponseHeader(context);
             using var stream = await response.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
             while (!reader.EndOfStream)
             {
+                await Task.Delay(35);
                 var line = await reader.ReadLineAsync();
-                if (!string.IsNullOrWhiteSpace(line) && (line.Contains("content") || line.Contains("data")))
+                if (!string.IsNullOrWhiteSpace(line) && (line.Contains(lineKey)))
                 {
-                    fun(DeserializeObject<T>(line));
+                    await fun(DeserializeObject<T>(line));
                 }
             }
+        }
+
+        public virtual string GetRequsetParams(object body)
+        {
+            var properties = from p in body.GetType().GetProperties()
+                             where p.GetValue(body, null) != null
+                             select HttpUtility.UrlEncode(p.Name) + "=" + HttpUtility.UrlEncode(p.GetValue(body, null)?.ToString());
+
+            return string.Join("&", properties.ToArray());
         }
 
         public virtual async Task SendJson<T>(HttpResponseMessage response, HttpContext context, string model, Func<T, CompletionsResponse> fun)

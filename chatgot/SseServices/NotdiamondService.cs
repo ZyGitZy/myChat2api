@@ -90,7 +90,7 @@ namespace chatgot.SseServices
         }
 
 
-        public override async Task SendStream<T>(HttpResponseMessage response, HttpContext context, Action<T> fun)
+        public override async Task SendStream<T>(HttpResponseMessage response, HttpContext context, Func<T, Task> fun, string lineKey = "content")
         {
             SetResponseHeader(context);
             using var stream = await response.Content.ReadAsStreamAsync();
@@ -100,7 +100,7 @@ namespace chatgot.SseServices
                 var line = await reader.ReadLineAsync();
                 if (!string.IsNullOrWhiteSpace(line))
                 {
-                    fun(DeserializeObject<T>(line));
+                    await fun(DeserializeObject<T>(line));
                 }
             }
         }

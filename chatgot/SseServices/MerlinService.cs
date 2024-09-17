@@ -26,7 +26,6 @@ namespace chatgot.SseServices
             var merlin = MapperBody(body);
 
             using var response = await SendRequest(merlin, httpClient, context, url);
-
             var comp = InitCompletionResponse(body.model);
             if (body.stream)
             {

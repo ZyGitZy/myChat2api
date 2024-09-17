@@ -7,7 +7,7 @@ namespace chatgot.Units
     {
         public static async Task<string> GetAuthorization(this HttpContext httpContext, string key = "Authorization")
         {
-            if (!httpContext.Request.Headers.TryGetValue("Authorization", out var authorization))
+            if (!httpContext.Request.Headers.TryGetValue(key, out var authorization))
             {
                 return await Task.FromResult("");
             }

@@ -45,7 +45,6 @@ namespace chatgot
 
             app.UseAuthorization();
 
-
             app.MapControllers();
 
             app.Run();

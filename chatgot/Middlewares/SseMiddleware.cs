@@ -2,6 +2,7 @@
 using chatgot.Units;
 using SseServices.MonicaService;
 using chatgot.SseServices;
+using chatgot.SseService;
 
 namespace chatgot.Middlewares
 {
@@ -9,13 +10,16 @@ namespace chatgot.Middlewares
     {
         private readonly RequestDelegate _next;
         private HttpClient _httpClient;
+        HttpClientHandler handler;
         IConfiguration configuration;
         public SseMiddleware(RequestDelegate next,
             IConfiguration configuration
             )
         {
             this.configuration = configuration;
-            _httpClient = new HttpClient();
+            handler = new HttpClientHandler();
+            handler.MaxResponseHeadersLength = 8196;
+            _httpClient = new HttpClient(handler);
             _next = next;
         }
 
@@ -42,6 +46,11 @@ namespace chatgot.Middlewares
             else if (context.Request.Path.Value.EndsWith("/notdiamond/v1/chat/completions"))
             {
                 await new NotdiamondService(configuration, "https://chat.notdiamond.ai/").SendAsync(context, _httpClient);
+                return;
+            }
+            else if (context.Request.Path.Value.EndsWith("/you/v1/chat/completions"))
+            {
+                await new YouService("https://you.com/api/streamingSearch").SendAsync(context, _httpClient);
                 return;
             }
             else if (context.Request.Path.Value.EndsWith("/v1/chat/completions"))

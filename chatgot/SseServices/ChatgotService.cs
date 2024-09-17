@@ -46,7 +46,7 @@ namespace chatgot.SseServices
                         await context.Response.WriteAsync("data:" + JsonConvert.SerializeObject(comp) + "\n\n");
                         await context.Response.Body.FlushAsync();
                     }
-                });
+                }, "content");
             }
             else
             {
