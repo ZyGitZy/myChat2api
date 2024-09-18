@@ -66,7 +66,6 @@ namespace chatgot.Units
             using var reader = new StreamReader(stream);
             while (!reader.EndOfStream)
             {
-                await Task.Delay(35);
                 var line = await reader.ReadLineAsync();
                 if (!string.IsNullOrWhiteSpace(line) && line.Contains("{") && line.Contains("}") && (line.Contains(lineKey)))
                 {
