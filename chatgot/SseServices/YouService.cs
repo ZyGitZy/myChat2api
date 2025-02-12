@@ -76,29 +76,29 @@ namespace chatgot.SseService
 
         private YouRequest MapperBody(CompletionsDto body)
         {
-            var result = new YouRequest();
-            var lastData = body.messages.LastOrDefault();
-            result.pastChatLength = lastData?.content.Length ?? 0;
-            result.selectedAiModel = body.model;
-            result.q = lastData?.content ?? "";
-            result.queryTraceId = "f6f06528-0897-4057-bdf0-a1f5322c1d5d";
-            result.chatId = "14068704-f230-405c-9f65-48972a008c47";
-            result.conversationTurnId = Guid.NewGuid().ToString();
-            DateTime utcNow = DateTime.UtcNow;
-            string formattedTime = utcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-            result.traceId = $"{result.chatId}|{result.conversationTurnId}|{formattedTime}";
-            body.messages.RemoveAt(body.messages.Count - 1);
-            // 伪造回答其实可以不要
-            List<Answer> chats = new();
-            foreach (var message in body.messages)
-            {
-                chats.Add(new Answer
-                {
-                    question = message.content,
-                    answer = message.content,
-                });
-            }
-            result.chat = JsonConvert.SerializeObject(chats);
+             var result = new YouRequest();
+  var lastData = body.messages.LastOrDefault();
+  result.pastChatLength = lastData?.content.Length ?? 0;
+  result.selectedAiModel = body.model;
+  result.q = lastData?.content ?? "";
+  result.queryTraceId = Guid.NewGuid().ToString();
+  result.chatId = Guid.NewGuid().ToString();
+  result.conversationTurnId = Guid.NewGuid().ToString();
+  DateTime utcNow = DateTime.UtcNow;
+  string formattedTime = utcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+  result.traceId = $"{result.chatId}|{result.conversationTurnId}|{formattedTime}";
+  body.messages.RemoveAt(body.messages.Count - 1);
+  // 伪造回答其实可以不要
+  List<Answer> chats = new();
+  foreach (var message in body.messages)
+  {
+      chats.Add(new Answer
+      {
+          question = message.content,
+          answer = "",
+      });
+  }
+  result.chat = JsonConvert.SerializeObject(chats);
 
             return result;
         }
